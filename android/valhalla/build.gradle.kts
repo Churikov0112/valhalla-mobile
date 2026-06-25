@@ -1,5 +1,4 @@
 import com.vanniktech.maven.publish.AndroidSingleVariantLibrary
-import com.vanniktech.maven.publish.SonatypeHost
 import java.net.URI
 
 plugins {
@@ -104,33 +103,28 @@ tasks.named("preBuild") {
 }
 
 mavenPublishing {
-    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
-    signAllPublications()
-
     if (project.version.toString() === "unspecified") {
         throw IllegalArgumentException("Version must be specified")
     }
 
-    coordinates("io.github.rallista", "valhalla-mobile", project.version.toString())
+    coordinates("com.github.churikov0112", "valhalla-mobile", project.version.toString())
 
     configure(AndroidSingleVariantLibrary(sourcesJar = true, publishJavadocJar = true))
 
     pom {
         name.set("Valhalla Mobile")
-        url.set("https://github.com/Rallista/valhalla-mobile")
+        url.set("https://github.com/Churikov0112/valhalla-mobile")
         description.set("A mobile app focused wrapper library for the valhalla routing engine")
         inceptionYear.set("2024")
         licenses {
             license {
                 name.set("MIT")
-                url.set("https://github.com/Rallista/valhalla-mobile?tab=MIT-1-ov-file#MIT-1-ov-file")
+                url.set("https://github.com/Churikov0112/valhalla-mobile?tab=MIT-1-ov-file#MIT-1-ov-file")
             }
         }
         developers {
             developer {
-                name.set("Jacob Fielding")
-                organization.set("Rallista")
-                organizationUrl.set("https://rallista.app")
+                name.set("Egor Churikov")
             }
         }
         contributors {
@@ -140,9 +134,24 @@ mavenPublishing {
             }
         }
         scm {
-            connection.set("scm:git:https://github.com/Rallista/valhalla-mobile.git")
-            developerConnection.set("scm:git:ssh://github.com/Rallista/valhalla-mobile.git")
-            url.set("https://github.com/Rallista/valhalla-mobile")
+            connection.set("scm:git:https://github.com/Churikov0112/valhalla-mobile.git")
+            developerConnection.set("scm:git:ssh://github.com/Churikov0112/valhalla-mobile.git")
+            url.set("https://github.com/Churikov0112/valhalla-mobile")
+        }
+    }
+}
+
+publishing {
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/Churikov0112/valhalla-mobile")
+            credentials {
+                username = project.findProperty("gpr.user") as String?
+                    ?: System.getenv("GITHUB_ACTOR")
+                password = project.findProperty("gpr.key") as String?
+                    ?: System.getenv("GITHUB_TOKEN")
+            }
         }
     }
 }
