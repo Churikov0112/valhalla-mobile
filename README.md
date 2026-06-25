@@ -1,88 +1,73 @@
 # Valhalla Mobile
 
 [![Valhalla](https://img.shields.io/badge/Valhalla-3.6.3-blue)](https://github.com/valhalla/valhalla/releases/tag/3.6.3)
-[![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FRallista%2Fvalhalla-mobile%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/Rallista/valhalla-mobile)
-[![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FRallista%2Fvalhalla-mobile%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/Rallista/valhalla-mobile)
-[![Maven Central](https://img.shields.io/maven-central/v/io.github.rallista/valhalla-mobile)](https://central.sonatype.com/artifact/io.github.rallista/valhalla-mobile)
-[![Kotlin Docs](https://img.shields.io/badge/Kotlin%20Dokka-purple?logo=kotlin)](https://rallista.github.io/valhalla-mobile/)
+
+Fork of [Rallista/valhalla-mobile](https://github.com/Rallista/valhalla-mobile) with support for `optimized_route` (TSP).
 
 This project builds [valhalla](https://github.com/valhalla/valhalla) as a static iOS or shared Android library.
 
-It currently only exposes the route function for the primary purpose of generating turn by turn navigation routes
-using a downloaded pre-parsed valhalla tileset.
+## Integration
 
-We welcome contributions to expand the functionality of this library. See our [CONTRIBUTING.md](CONTRIBUTING.md)
-for more information.
-If you've got questions, would like to have informal discussions, or just want to ping us about a question, PR. Feel free 
-to reach out on the OpenStreetMap Slack (osmus.slack.com) under the [#valhalla-mobile](`https://osmus.slack.com/archives/C08N6SUNZTJ`) channel.
-
-## Setup
-
-### Android
-
-Using a `libs.versions.toml` with a `build.gradle.kts`
-
-```toml
-[verisons]
-valhallaMobile = "0.1.0"
-[libraries]
-valhalla-mobile = { group = "io.github.rallista", name = "valhalla-mobile", version.ref = "valhallaMobile" }
-```
-
-```kts
-implementation(libs.valhalla.mobile)
-```
-
-Using a standard `build.gradle.kts`
-
-```kts
-implementation("io.github.rallista:valhalla-mobile:0.1.0")
-```
-
-Using a standard `build.gradle`
+### iOS — Swift Package Manager
 
 ```
-implementation 'io.github.rallista:valhalla-mobile:0.1.0'
+https://github.com/Churikov0112/valhalla-mobile.git
 ```
 
-### iOS
+Version `0.5.3`, up to next major.
 
-In a swift package:
+### Android — GitHub Packages
 
-```swift
-let package = Package(
-    dependencies: [
-        .package(url: "https://github.com/rallista/valhalla-mobile.git", from: "0.1.0"),
-    ],
-    targets: [
-        .target(
-            dependencies: [
-                .product(name: "Valhalla", package: "valhalla-mobile")
-            ]
-        ),
-    ]
-)
+`android/build.gradle.kts`:
+
+```kotlin
+allprojects {
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/Churikov0112/valhalla-mobile")
+            credentials {
+                username = project.findProperty("gpr.user") as String?
+                    ?: System.getenv("GITHUB_ACTOR")
+                password = project.findProperty("gpr.key") as String?
+                    ?: System.getenv("GITHUB_TOKEN")
+            }
+        }
+    }
+}
 ```
 
-## Manually Building Valhalla C++
+`android/app/build.gradle.kts`:
 
-Fetching submodules
+```kotlin
+implementation("com.github.churikov0112:valhalla-mobile:0.5.3")
+```
+
+> Requires a classic GitHub PAT with `read:packages` scope in `~/.gradle/gradle.properties`:
+> ```properties
+> gpr.key=ghp_...
+> gpr.user=Churikov0112
+> ```
+
+## Development
+
+See [DEVELOPER.md](DEVELOPER.md) for:
+- Project architecture
+- How to add a new method (step-by-step)
+- How to rebuild the native libraries
+
+## Building from Source
+
+### Prerequisites
 
 ```sh
 git submodule update --init --recursive
-```
-
-Set up VCPKG
-
-```sh
 git clone https://github.com/microsoft/vcpkg && git -C vcpkg checkout 2025.12.12
 ./vcpkg/bootstrap-vcpkg.sh
 export VCPKG_ROOT=`pwd`/vcpkg
 ```
 
-### iOS Swift Package
-
-On iOS, you must pre-build the xcframework using the command:
+### iOS
 
 ```sh
 ./build.sh ios clean
@@ -90,22 +75,13 @@ On iOS, you must pre-build the xcframework using the command:
 
 ### Android
 
-**Prerequisites:** See [development.md](docs/development.md), specifically 
-setting up NDK `29.0.14206865` to match CI.
-
-The project's build.gradle.kts includes a build task that automatically runs the script below selectively per architecture.
-It's also possible to run this manually:
+Requires NDK `29.0.14206865`. See [docs/development.md](docs/development.md).
 
 ```sh
 ./build.sh android clean
 ```
 
-## Valhalla Fork
-
-This project uses our fork of valhalla at <https://github.com/Rallista/valhalla> as a submodule. If a feature is missing, please
-open an issue or PR on that repository to upgrade it to valhalla's latest version.
-
 ## References
 
-- Valhalla <https://github.com/valhalla/valhalla>
-- Swift Package Manager C++ (for fun - this repo takes the old approach) <https://www.swift.org/documentation/articles/wrapping-c-cpp-library-in-swift.html>
+- [Valhalla](https://github.com/valhalla/valhalla)
+- [Original Rallista/valhalla-mobile](https://github.com/Rallista/valhalla-mobile)
