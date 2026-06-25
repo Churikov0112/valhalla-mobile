@@ -44,6 +44,43 @@ Java_com_valhalla_valhalla_ValhallaKotlin_route(JNIEnv *env,
     return env->NewStringUTF(result.c_str());
 }
 
+extern "C"
+JNIEXPORT jstring
+
+JNICALL
+Java_com_valhalla_valhalla_ValhallaKotlin_optimizedRoute(JNIEnv *env,
+                                                         jobject thiz,
+                                                         jstring jRequest,
+                                                         jstring jConfigPath) {
+    
+    const char *request = env->GetStringUTFChars(jRequest, 0);
+    const char *config_path = env->GetStringUTFChars(jConfigPath, 0);
+
+    std::string result;
+    try {
+        // TODO: Android currently creates a new actor every time. Optimize to be like iOS later.
+        ValhallaActor valhallaActor(config_path);
+        result = valhallaActor.optimized_route(request);
+    } catch (const valhalla::valhalla_exception_t &err) {
+        printf("[ValhallaActor] optimized_route valhalla_exception: %s\n", err.what());
+        std::string code = std::to_string(err.code);
+        std::string message = err.message.c_str();
+
+        result = "{\"code\":" + code + ",\"message\":\"" + message + "\"}";
+    } catch (const std::exception &err) {
+        printf("[ValhallaActor] optimized_route std::exception: %s\n", err.what());
+        result = "{\"code\":-1,\"message\":\"" + std::string(err.what()) + "\"}";
+    } catch (...) {
+        printf("[ValhallaActor] optimized_route unknown exception");
+        result = "{\"code\":-1,\"message\":\"unknown exception\"}";
+    }
+
+    env->ReleaseStringUTFChars(jRequest, request);
+    env->ReleaseStringUTFChars(jConfigPath, config_path);
+
+    return env->NewStringUTF(result.c_str());
+}
+
 #elif __APPLE__
 void* create_valhalla_actor(const char *config_path, ValhallaMobileHttpClient* http_client) {
     return new ValhallaActor(config_path, http_client);
@@ -68,6 +105,27 @@ std::string route(const char *request, void* actor) {
         result = "{\"code\":-1,\"message\":\"" + std::string(err.what()) + "\"}";
     } catch (...) {
         printf("[ValhallaActor] route unknown exception");
+        result = "{\"code\":-1,\"message\":\"unknown exception\"}";
+    }
+
+    return result;
+}
+
+std::string optimized_route(const char *request, void* actor) {
+    std::string result;
+    try {
+        result = ((ValhallaActor*) actor)->optimized_route(request);
+    } catch (const valhalla::valhalla_exception_t &err) {
+        printf("[ValhallaActor] optimized_route valhalla_exception: %s\n", err.what());
+        std::string code = std::to_string(err.code);
+        std::string message = err.message.c_str();
+
+        result = "{\"code\":" + code + ",\"message\":\"" + message + "\"}";
+    } catch (const std::exception &err) {
+        printf("[ValhallaActor] optimized_route std::exception: %s\n", err.what());
+        result = "{\"code\":-1,\"message\":\"" + std::string(err.what()) + "\"}";
+    } catch (...) {
+        printf("[ValhallaActor] optimized_route unknown exception");
         result = "{\"code\":-1,\"message\":\"unknown exception\"}";
     }
 

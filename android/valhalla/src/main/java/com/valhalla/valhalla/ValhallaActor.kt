@@ -2,6 +2,8 @@ package com.valhalla.valhalla
 
 internal interface ValhallaActorProviding {
   fun route(request: String): String
+
+  fun optimizedRoute(request: String): String
 }
 
 /**
@@ -22,5 +24,9 @@ internal class ValhallaActor(private val configPath: String) : ValhallaActorProv
    */
   override fun route(request: String): String {
     return valhallaKotlin.route(request, configPath)
+  }
+
+  override fun optimizedRoute(request: String): String {
+    return valhallaKotlin.optimizedRoute(request, configPath)
   }
 }
