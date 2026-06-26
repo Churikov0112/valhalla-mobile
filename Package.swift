@@ -1,38 +1,15 @@
 // swift-tools-version:5.8
 import PackageDescription
-import Foundation
 
-// Use the local binary if VALHALLA_MOBILE_DEV=true or if local XCFramework exists
-let hasLocalBinary = FileManager.default.fileExists(atPath: "build/apple/valhalla-wrapper.xcframework")
-let useLocalBinary = hasLocalBinary || (Context.environment["VALHALLA_MOBILE_DEV"].flatMap(Bool.init) ?? false)
-
-// Use the local binary
-var binaryTarget: Target = .binaryTarget(
-    name: "ValhallaWrapper",
-    path: "build/apple/valhalla-wrapper.xcframework"
-)
-
-// CI will replace the nils with the actual values when building a release
 let version: String = "0.5.4"
 let binaryURL: String =
     "https://github.com/Churikov0112/valhalla-mobile/releases/download/v\(version)/valhalla-wrapper.xcframework.zip"
-let binaryChecksum: String = "0000000000000000000000000000000000000000000000000000000000000000"
-
-if !useLocalBinary {
-    binaryTarget = .binaryTarget(
-        name: "ValhallaWrapper",
-        url: binaryURL,
-        checksum: binaryChecksum
-    )
-}
+let binaryChecksum: String = "a9fd74d2b5c1c6fd60339845025b68aa5a2b2f6cdbe91d392c30f3a5a8f6f61a"
 
 let package = Package(
     name: "ValhallaMobile",
     platforms: [
         .iOS("16.4")
-        // .tvOS(.v13),
-        // .watchOS(.v6),
-        // .macOS(.v10_13)
     ],
     products: [
         .library(
@@ -69,7 +46,11 @@ let package = Package(
             path: "apple/Sources/ValhallaObjc",
             linkerSettings: [.linkedLibrary("z")]
         ),
-        binaryTarget,
+        .binaryTarget(
+            name: "ValhallaWrapper",
+            url: binaryURL,
+            checksum: binaryChecksum
+        ),
         .testTarget(
             name: "ValhallaTests",
             dependencies: ["Valhalla"],
