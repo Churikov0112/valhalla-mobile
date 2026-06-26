@@ -1,8 +1,10 @@
 // swift-tools-version:5.8
 import PackageDescription
+import Foundation
 
-// Use the local binary if true
-let useLocalBinary = Context.environment["VALHALLA_MOBILE_DEV"].flatMap(Bool.init) ?? false
+// Use the local binary if VALHALLA_MOBILE_DEV=true or if local XCFramework exists
+let hasLocalBinary = FileManager.default.fileExists(atPath: "build/apple/valhalla-wrapper.xcframework")
+let useLocalBinary = hasLocalBinary || (Context.environment["VALHALLA_MOBILE_DEV"].flatMap(Bool.init) ?? false)
 
 // Use the local binary
 var binaryTarget: Target = .binaryTarget(

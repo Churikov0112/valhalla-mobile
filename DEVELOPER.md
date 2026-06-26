@@ -226,3 +226,234 @@ gpr.user=Churikov0112
 ```
 
 CI (GitHub Actions) uses the built-in `GITHUB_TOKEN` automatically.
+
+## Full Pipeline: Development → Test → Release
+
+### Overview
+
+```
+Add C++ method → Add iOS/Android/Dart layers → Local build → Local test → Bump version → Build + publish → Update fkr_app
+```
+
+---
+
+### 1. Environment Setup
+
+```bash
+# iOS
+xcode-select --install                # Xcode CLI tools
+brew install cmake ninja              # Build tools
+
+# Android
+brew install openjdk@17              # JDK 17
+export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
+
+# Android NDK (via SDK Manager or manual download)
+export ANDROID_NDK_HOME=~/Library/Android/sdk/ndk/28.2.13676358
+
+# vcpkg (must be cloned in repo root)
+git clone https://github.com/microsoft/vcpkg.git
+./vcpkg/bootstrap-vcpkg.sh
+export VCPKG_ROOT="$(pwd)/vcpkg"
+
+# GitHub Packages token (classic PAT with write:packages)
+# Add to ~/.gradle/gradle.properties:
+#   gpr.user=Churikov0112
+#   gpr.key=ghp_xxx
+```
+
+### 2. Add a New Method
+
+See [How to Add a New Method](#how-to-add-a-new-method) above.
+
+Files to touch (in order):
+
+| # | File | What |
+|---|------|------|
+| 1 | `src/wrapper/include/valhalla_actor.h` | Declare method on `ValhallaActor` |
+| 2 | `src/wrapper/valhalla_actor.cpp` | Implement — call `actor->my_method(req)` |
+| 3 | `src/wrapper/include/main.h` | Declare C binding (iOS) + JNI (Android) |
+| 4 | `src/wrapper/main.cpp` | Implement C binding + JNI with error handling |
+| 5 | `apple/Sources/ValhallaObjc/include/ValhallaWrapper.h` | ObjC interface |
+| 6 | `apple/Sources/ValhallaObjc/ValhallaWrapper.mm` | ObjC → C bridge |
+| 7 | `apple/Sources/Valhalla/Valhalla.swift` | Swift method + protocol conformance |
+| 8 | `android/valhalla/…/ValhallaKotlin.kt` | `external fun` declaration |
+| 9 | `android/valhalla/…/ValhallaActor.kt` | Interface + implementation |
+| 10 | `android/valhalla/…/Valhalla.kt` | Public API with JSON serialization |
+
+### 3. Local Build
+
+```bash
+# From repo root
+cd ~/Desktop/projects/valhalla-mobile
+
+# iOS — builds 3 archs + creates XCFramework
+bash build.sh ios
+# → build/apple/valhalla-wrapper.xcframework
+
+# Android — builds 4 archs + moves .so to jniLibs
+export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
+export ANDROID_NDK_HOME=~/Library/Android/sdk/ndk/28.2.13676358
+export VCPKG_ROOT="$(pwd)/vcpkg"
+
+bash build.sh android
+
+# Build AAR
+cd android && ./gradlew :valhalla:assembleRelease
+cd ..
+# → android/valhalla/build/outputs/aar/valhalla-release.aar
+```
+
+> **Note**: If `bash build.sh android` fails, clean individual arch dirs and retry:
+> ```bash
+> rm -rf build/android/ARM_ARCH  # e.g. build/android/x86
+> bash build.sh android
+> ```
+
+### 4. Local Integration in fkr_app
+
+#### iOS — Local SPM Package
+
+In `ios/Runner.xcodeproj/project.pbxproj`, replace remote with local:
+
+```diff
+- /* Begin XCRemoteSwiftPackageReference section */
+-     repositoryURL = "https://github.com/Churikov0112/valhalla-mobile.git";
+-     requirement = { kind = upToNextMajorVersion; minimumVersion = 0.5.3; };
+- /* End XCRemoteSwiftPackageReference section */
++ /* Begin XCLocalSwiftPackageReference section */
++     isa = XCLocalSwiftPackageReference;
++     relativePath = "../../valhalla-mobile";
++ /* End XCLocalSwiftPackageReference section */
+```
+
+Then in Xcode: `File → Packages → Resolve Package Versions` (or clear `Package.resolved`).
+
+#### Android — Local AAR
+
+```bash
+# Copy AAR
+cp ~/Desktop/projects/valhalla-mobile/android/valhalla/build/outputs/aar/valhalla-release.aar \
+   ~/Desktop/projects/fkr_app/android/app/libs/
+
+# In android/app/build.gradle.kts:
+#   implementation(fileTree("libs") { include("*.aar") })
+# Remove the remote GitHub Packages line.
+```
+
+#### Flutter Bridge
+
+Update these files in fkr_app:
+
+| File | What |
+|------|------|
+| `lib/src/services/valhalla/valhalla_service.dart` | Add Dart method calling `_channel.invokeMethod(...)` |
+| `ios/Runner/ValhallaBridge.swift` | Add Swift bridge method + request builder |
+| `ios/Runner/AppDelegate.swift` | Add `case "methodName":` handler |
+| `android/…/MainActivity.kt` | Add `handleMethod()`, reflection, JNI call |
+
+### 5. Release
+
+#### 5.1 Bump Version
+
+```bash
+# version.txt — single source of truth
+echo "0.5.4" > version.txt
+
+# Package.swift — update version string
+sed -i '' 's/let version: String = "0.5.3"/let version: String = "0.5.4"/' Package.swift
+```
+
+#### 5.2 Build XCFramework + Compute Checksum
+
+```bash
+bash build.sh ios
+
+cd build/apple
+zip -r -q --symlinks valhalla-wrapper.xcframework.zip valhalla-wrapper.xcframework
+shasum -a 256 valhalla-wrapper.xcframework.zip | cut -d' ' -f1
+# → copy this checksum
+
+# Update Package.swift with new checksum
+sed -i '' 's/let binaryChecksum: String = "OLD"/let binaryChecksum: String = "NEW"/' Package.swift
+```
+
+#### 5.3 Build AAR
+
+```bash
+export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
+export ANDROID_NDK_HOME=~/Library/Android/sdk/ndk/28.2.13676358
+bash build.sh android
+cd android && ./gradlew :valhalla:assembleRelease && cd ..
+```
+
+#### 5.4 Git Commit & Tag
+
+```bash
+git add -A
+git commit -m "feat: add my_method (v0.5.4)"
+git tag v0.5.4
+git push origin feat/optimized-route
+git push origin v0.5.4
+```
+
+#### 5.5 GitHub Release (iOS)
+
+1. Go to `https://github.com/Churikov0112/valhalla-mobile/releases`
+2. Create release from tag `v0.5.4`
+3. Upload `build/apple/valhalla-wrapper.xcframework.zip`
+4. Publish
+
+#### 5.6 Publish AAR to GitHub Packages
+
+```bash
+cd android
+export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
+./gradlew :valhalla:publishReleasePublicationToGitHubPackagesRepository
+```
+
+> Requires `gpr.key` in `~/.gradle/gradle.properties` with `write:packages` scope.
+
+#### 5.7 Switch fkr_app Back to Remote
+
+```bash
+# iOS — restore remote SPM reference in project.pbxproj
+# (reverse the local → remote change)
+
+# Android — restore remote dependency
+# implementation("com.github.churikov0112:valhalla-mobile:0.5.4")
+# Remove local AAR + fileTree line
+rm android/app/libs/valhalla-release.aar
+```
+
+### 6. Troubleshooting
+
+#### `No space left on device` during Android build
+
+```bash
+# Clean cmake build dirs of already-built archs to free ~5 GB
+rm -rf build/android/arm64-v8a build/android/armeabi-v7a build/android/x86_64
+
+# iOS builds also take ~4 GB — delete if not needed
+rm -rf build/apple
+```
+
+#### `Duplicate class` on Android (local + remote AAR both present)
+
+Remove the remote `implementation(...)` line, keep only `fileTree(...)`.
+
+#### `VALHALLA_MOBILE_DEV=true` with remote SPM doesn't work
+
+This is expected — the local `build/apple/` path in `Package.swift` resolves relative to the SPM checkout in DerivedData, not your working copy. Use `XCLocalSwiftPackageReference` instead.
+
+#### JNI function not found (`No implementation found for ...`)
+
+The `.so` inside the AAR was built from old code. Rebuild:
+```bash
+rm -rf build/android
+bash build.sh android
+cd android && ./gradlew :valhalla:assembleRelease
+```
+
+Otherwise, ensure `main.cpp` declares the JNI function in the `__ANDROID__` section. The JNI function name must match the Kotlin class + method exactly.
+

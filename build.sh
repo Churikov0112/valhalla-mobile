@@ -103,10 +103,10 @@ if [ "$2" == "clean" ]; then
 fi
 
 # Handle cleaning
-if $clean_all; then
+if [ "${clean_all:-false}" = true ]; then
     echo "Cleaning all build directories..."
     rm -rf build
-elif $clean; then
+elif [ "${clean:-false}" = true ]; then
     if [ "$platform" == "ios" ]; then
         echo "Cleaning the iOS build directory..."
         rm -rf build/apple
