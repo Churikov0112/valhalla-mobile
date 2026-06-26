@@ -21,6 +21,11 @@ JNIEXPORT jstring JNICALL Java_com_valhalla_valhalla_ValhallaKotlin_optimizedRou
                                                 jstring jRequest,
                                                 jstring jConfigPath);
 
+JNIEXPORT jstring JNICALL Java_com_valhalla_valhalla_ValhallaKotlin_height(JNIEnv *env,
+                                                jobject thiz,
+                                                jstring jRequest,
+                                                jstring jConfigPath);
+
 #ifdef __cplusplus
 }
 #endif
@@ -29,6 +34,7 @@ JNIEXPORT jstring JNICALL Java_com_valhalla_valhalla_ValhallaKotlin_optimizedRou
 
 std::string route(const char *request, void* actor);
 std::string optimized_route(const char *request, void* actor);
+std::string height(const char *request, void* actor);
 void* create_valhalla_actor(const char *config_path, ValhallaMobileHttpClient* http_client = nullptr);
 void delete_valhalla_actor(void* actor);
 

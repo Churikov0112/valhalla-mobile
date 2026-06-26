@@ -10,4 +10,6 @@ internal class ValhallaKotlin {
   external fun route(request: String, configPath: String): String
 
   external fun optimizedRoute(request: String, configPath: String): String
+
+  external fun height(request: String, configPath: String): String
 }

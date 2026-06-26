@@ -118,4 +118,33 @@ class Valhalla(
       }
     }
   }
+
+  fun height(request: RouteRequest): ValhallaResponse {
+    val encodedRequest = moshi.adapter(RouteRequest::class.java).toJson(request)
+    val rawResponse = valhallaActor.height(encodedRequest)
+
+    if (rawResponse.contains("code") and !rawResponse.contains("routes")) {
+      val error = moshi.adapter(ErrorResponse::class.java).fromJson(rawResponse)
+      error?.let { throw ValhallaException.Internal(it) }
+      throw ValhallaException.InvalidError()
+    }
+
+    return when (request.format) {
+      RouteRequest.Format.gpx -> throw ValhallaException.NotSupported()
+      RouteRequest.Format.osrm -> {
+        val osrmResponse =
+            moshi.adapter(OsrmRouteResponse::class.java).fromJson(rawResponse)
+                ?: throw ValhallaException.InvalidResponse()
+        ValhallaResponse.Osrm(osrmResponse)
+      }
+
+      RouteRequest.Format.pbf -> throw ValhallaException.NotSupported()
+      else -> {
+        val valhallaResponse =
+            moshi.adapter(RouteResponse::class.java).fromJson(rawResponse)
+                ?: throw ValhallaException.InvalidResponse()
+        ValhallaResponse.Json(valhallaResponse)
+      }
+    }
+  }
 }

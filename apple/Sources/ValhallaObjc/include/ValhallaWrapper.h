@@ -16,6 +16,8 @@
 
 - (NSString*)optimizedRoute:(NSString*)request;
 
+- (NSString*)height:(NSString*)request;
+
 @end
 
 #endif /* ValhallaWrapperHeader_h */

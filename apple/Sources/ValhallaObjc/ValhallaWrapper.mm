@@ -171,6 +171,15 @@ public:
     }
 }
 
+- (NSString*)height:(NSString*)request
+{
+    @synchronized(self) {
+        std::string req = std::string([request UTF8String]);
+        std::string res = height(req.c_str(), _actor);
+        return [NSString stringWithUTF8String:res.c_str()];
+    }
+}
+
 - (void) dealloc
 {
     delete_valhalla_actor(_actor);

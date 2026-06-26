@@ -82,3 +82,9 @@ std::string ValhallaActor::optimized_route(const std::string& request) {
     std::string result = actor->optimized_route(req);
     return result;
 }
+
+std::string ValhallaActor::height(const std::string& request) {
+    std::string req = std::string(request);
+    std::string result = actor->height(req);
+    return result;
+}
