@@ -1,7 +1,7 @@
 // swift-tools-version:5.8
 import PackageDescription
 
-let version: String = "0.5.4"
+let version: String = "0.5.5"
 let binaryURL: String =
     "https://github.com/Churikov0112/valhalla-mobile/releases/download/v\(version)/valhalla-wrapper.xcframework.zip"
 let binaryChecksum: String = "a9fd74d2b5c1c6fd60339845025b68aa5a2b2f6cdbe91d392c30f3a5a8f6f61a"
