@@ -3,41 +3,49 @@
 ## Architecture
 
 ```
-┌──────────────────────────────────────────────┐
-│  Flutter App (Dart)                           │
-│  ValhallaService (MethodChannel)              │
-├──────────────────────────────────────────────┤
-│  Platform Bridge                              │
-│  ┌─────────────────┐ ┌─────────────────────┐ │
-│  │ iOS (Swift)      │ │ Android (Kotlin)    │ │
-│  │ Valhalla.swift   │ │ ValhallaKotlin.kt   │ │
-│  │ ValhallaWrapper  │ │ Valhalla.kt         │ │
-│  └──────┬──────────┘ └──────┬──────────────┘ │
-│         │ ObjC              │ JNI             │
-│         ▼                    ▼                 │
-│  ┌──────────────────────────────────────────┐ │
-│  │  C++ (src/wrapper/)                      │ │
-│  │  main.cpp + valhalla_actor.cpp           │ │
-│  │  ValhallaActor::route()                  │ │
-│  │  ValhallaActor::optimized_route()        │ │
-│  └──────────────┬───────────────────────────┘ │
-│                 ▼                              │
-│  ┌──────────────────────────────────────────┐ │
-│  │  valhalla/tyr/actor_t                     │ │
-│  │  (Valhalla routing engine submodule)      │ │
-│  └──────────────────────────────────────────┘ │
-└──────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────┐
+│  Flutter App (Dart)                               │
+│  ValhallaService                                  │
+│  └─ строит Valhalla JSON                          │
+│  └─ разбирает ответ                               │
+│  └─ MethodChannel('valhalla_channel')              │
+├──────────────────────────────────────────────────┤
+│  Platform Bridge (чистые прокси, pass-through)     │
+│  ┌──────────────────┐ ┌────────────────────────┐ │
+│  │ iOS (Swift)       │ │ Android (Kotlin)       │ │
+│  │ AppDelegate       │ │ MainActivity.kt        │ │
+│  │ → Valhalla.swift  │ │ → ValhallaKotlin.kt    │ │
+│  │ → ValhallaWrapper │ │ → JNI                  │ │
+│  │   (ObjC)          │ │                        │ │
+│  └──────┬───────────┘ └──────┬─────────────────┘ │
+│         │ ObjC               │ JNI                │
+│         ▼                     ▼                   │
+│  ┌──────────────────────────────────────────────┐ │
+│  │  C++ (src/wrapper/)                          │ │
+│  │  main.cpp + valhalla_actor.cpp               │ │
+│  │  ValhallaActor::route()                      │ │
+│  │  ValhallaActor::optimized_route()            │ │
+│  └──────────────────┬───────────────────────────┘ │
+│                     ▼                              │
+│  ┌──────────────────────────────────────────────┐ │
+│  │  valhalla/tyr/actor_t                         │ │
+│  │  (Valhalla routing engine submodule)          │ │
+│  └──────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────┘
 ```
 
 ### Layers
 
 | Layer | iOS | Android |
 |-------|-----|---------|
-| Dart | `ValhallaService` (MethodChannel `valhalla_channel`) | same |
-| Native bridge | `Valhalla.swift` → `ValhallaWrapper.mm` (ObjC) | `ValhallaKotlin.kt` → JNI |
+| Dart | `ValhallaService` — builds Valhalla JSON, calls MethodChannel `{'request': jsonString}` | same |
+| Native bridge (proxy) | `Valhalla.swift` → `ValhallaWrapper.mm` (ObjC) — pass-through raw JSON | `ValhallaKotlin.kt` → JNI — pass-through raw JSON |
 | C++ wrapper | `main.cpp` (iOS C bindings) | `main.cpp` (Android JNI) |
 | C++ actor | `valhalla_actor.cpp` — `ValhallaActor` class | same |
 | Engine | Valhalla `tyr::actor_t` | same |
+
+> Native layer (Swift/Kotlin) is a pure proxy — it does not construct or parse Valhalla JSON.
+> All request building lives in Dart's `ValhallaService`.
 
 ## How to Add a New Method
 
@@ -145,20 +153,37 @@ Future<Map<String, dynamic>> myMethod({
     required String costing,
     required List<Map<String, double>> waypoints,
 }) async {
-    final result = await _channel.invokeMethod('myMethod', {
+    // Build Valhalla JSON request in Dart, send as raw string
+    final requestJson = jsonEncode({
+        'locations': waypoints.map((w) => {'lon': w['lon'], 'lat': w['lat']}).toList(),
         'costing': costing,
-        'waypoints': waypoints,
+    });
+    final result = await _channel.invokeMethod('myMethod', {
+        'request': requestJson,
     });
     return jsonDecode(result as String) as Map<String, dynamic>;
 }
 ```
 
+> The native layer (iOS/Android) receives the raw JSON string and passes it directly to C++.
+> JSON construction lives entirely in Dart.
+
 ### 11. iOS — `AppDelegate.swift` (Flutter bridge)
 
 ```swift
-bridge.myMethod(request: requestString) { result, error in
-    result?(result)
-}
+// Add "myMethod" to the existing group case (shared raw-string protocol):
+case "route", "optimizedRoute", "height", "locate", "myMethod":
+    guard let request = args["request"] as? String else {
+        result(FlutterError(code: "INVALID_ARGS", ...))
+        return
+    }
+    let response: String
+    switch call.method {
+    case "route": response = bridge.route(request: request)
+    case "myMethod": response = bridge.myMethod(request: request)
+    default: fatalError()
+    }
+    result(response)
 ```
 
 ### 12. Rebuild
@@ -347,10 +372,10 @@ Update these files in fkr_app:
 
 | File | What |
 |------|------|
-| `lib/src/services/valhalla/valhalla_service.dart` | Add Dart method calling `_channel.invokeMethod(...)` |
-| `ios/Runner/ValhallaBridge.swift` | Add Swift bridge method + request builder |
-| `ios/Runner/AppDelegate.swift` | Add `case "methodName":` handler |
-| `android/…/MainActivity.kt` | Add `handleMethod()`, reflection, JNI call |
+| `lib/src/services/valhalla/valhalla_service.dart` | Add Dart method — builds Valhalla JSON, calls `_channel.invokeMethod('method', {'request': jsonString})` |
+| `ios/Runner/ValhallaBridge.swift` | Add Swift bridge method — `func method(request: String) -> String` (raw string pass-through) |
+| `ios/Runner/AppDelegate.swift` | Add `"methodName"` to the existing group case |
+| `android/…/MainActivity.kt` | Add `"methodName"` to `when` + `ensureValhallaLoaded` reflection — uses `handleGeneric()` |
 
 ### 5. Release
 

@@ -39,6 +39,7 @@ public:
     std::string route(const std::string& request);
     std::string optimized_route(const std::string& request);
     std::string height(const std::string& request);
+    std::string locate(const std::string& request);
 };
 
 #endif // VALHALLAACTOR_H

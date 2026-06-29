@@ -6,6 +6,8 @@ internal interface ValhallaActorProviding {
   fun optimizedRoute(request: String): String
 
   fun height(request: String): String
+
+  fun locate(request: String): String
 }
 
 /**
@@ -34,5 +36,9 @@ internal class ValhallaActor(private val configPath: String) : ValhallaActorProv
 
   override fun height(request: String): String {
     return valhallaKotlin.height(request, configPath)
+  }
+
+  override fun locate(request: String): String {
+    return valhallaKotlin.locate(request, configPath)
   }
 }

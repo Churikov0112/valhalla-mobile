@@ -18,6 +18,8 @@
 
 - (NSString*)height:(NSString*)request;
 
+- (NSString*)locate:(NSString*)request;
+
 @end
 
 #endif /* ValhallaWrapperHeader_h */

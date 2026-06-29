@@ -88,3 +88,9 @@ std::string ValhallaActor::height(const std::string& request) {
     std::string result = actor->height(req);
     return result;
 }
+
+std::string ValhallaActor::locate(const std::string& request) {
+    std::string req = std::string(request);
+    std::string result = actor->locate(req);
+    return result;
+}

@@ -13,6 +13,8 @@ public protocol ValhallaProviding {
     func optimizedRoute(request: RouteRequest) throws -> RouteResponse
 
     func height(request: RouteRequest) throws -> RouteResponse
+
+    func locate(request: RouteRequest) throws -> RouteResponse
 }
 
 public final class Valhalla: ValhallaProviding {
@@ -106,5 +108,27 @@ public final class Valhalla: ValhallaProviding {
 
     public func height(rawRequest request: String) -> String {
         actor!.height(request)
+    }
+
+    public func locate(request: RouteRequest) throws -> RouteResponse {
+        let requestData = try JSONEncoder().encode(request)
+        guard let requestStr = String(data: requestData, encoding: .utf8) else {
+            throw ValhallaError.encodingNotUtf8("requestStr")
+        }
+
+        let resultStr = locate(rawRequest: requestStr)
+        guard let resultData = resultStr.data(using: .utf8) else {
+            throw ValhallaError.encodingNotUtf8("resultData")
+        }
+
+        if let error = try? JSONDecoder().decode(ValhallaErrorModel.self, from: resultData) {
+            throw ValhallaError.valhallaError(error.code, error.message)
+        }
+
+        return try JSONDecoder().decode(RouteResponse.self, from: resultData)
+    }
+
+    public func locate(rawRequest request: String) -> String {
+        actor!.locate(request)
     }
 }
