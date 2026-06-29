@@ -443,21 +443,47 @@ git push origin v0.5.4
 ```bash
 cd android
 export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
-./gradlew :valhalla:publishReleasePublicationToGitHubPackagesRepository
+./gradlew :valhalla:publishMavenPublicationToGitHubPackagesRepository
 ```
 
 > Requires `gpr.key` in `~/.gradle/gradle.properties` with `write:packages` scope.
 
-#### 5.7 Switch fkr_app Back to Remote
+#### 5.7 Switch fkr_app Between Local and Remote
+
+> `android/build.gradle.kts` (project-level) already has GitHub Packages repository configured — no changes needed there.
+
+**Switch to Local** (development on valhalla-mobile fork):
 
 ```bash
-# iOS — restore remote SPM reference in project.pbxproj
-# (reverse the local → remote change)
+# Android — copy local AAR and add fileTree dependency
+cp /path/to/valhalla-mobile/android/valhalla/build/outputs/aar/valhalla-release.aar \
+   android/app/libs/valhalla-release.aar
 
-# Android — restore remote dependency
-# implementation("com.github.churikov0112:valhalla-mobile:0.5.4")
-# Remove local AAR + fileTree line
+# In android/app/build.gradle.kts, replace:
+#   implementation("com.github.churikov0112:valhalla-mobile:0.5.6")
+# with:
+#   implementation(fileTree("libs") { include("*.aar") })
+
+# iOS — replace remote SPM with local reference in project.pbxproj:
+#   XCLocalSwiftPackageReference
+#   relativePath = "../../valhalla-mobile"
+```
+
+**Switch Back to Remote** (release):
+
+```bash
+# Android — remove local AAR and restore remote dependency
 rm android/app/libs/valhalla-release.aar
+
+# In android/app/build.gradle.kts, replace:
+#   implementation(fileTree("libs") { include("*.aar") })
+# with:
+#   implementation("com.github.churikov0112:valhalla-mobile:0.5.6")
+
+# iOS — replace local SPM with remote reference in project.pbxproj:
+#   XCRemoteSwiftPackageReference
+#   repositoryURL = "https://github.com/Churikov0112/valhalla-mobile"
+#   requirement = { kind = exactVersion; version = 0.5.6; }
 ```
 
 ### 6. Troubleshooting
