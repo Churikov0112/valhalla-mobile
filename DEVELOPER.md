@@ -397,6 +397,15 @@ git push origin feat/optimized-route
 git push origin v0.5.4
 ```
 
+> ⚠️ **Не меняй уже опубликованный тег.**
+> 
+> Если ты создал тег и GitHub Release — не делай `git commit --amend` и не пересоздавай тег (`git tag -d + git push --delete + git tag`). SPM запоминает коммит по хешу в `Package.resolved`. Если тег теперь указывает на другой коммит — резолв сломается, и придётся bumpить версию.
+> 
+> **Что делать, если нужно исправить `Package.swift` после релиза:**
+> - Не трогай старый тег. Выпусти новую минорную версию (напр. `v0.5.5`).
+> - Поменяй только `version.txt` и `Package.swift` (версия + checksum). Если бинарник не менялся — checksum тот же.
+> - Создай новый тег + GitHub Release с тем же `.xcframework.zip`.
+
 #### 5.5 GitHub Release (iOS)
 
 1. Go to `https://github.com/Churikov0112/valhalla-mobile/releases`
@@ -456,4 +465,18 @@ cd android && ./gradlew :valhalla:assembleRelease
 ```
 
 Otherwise, ensure `main.cpp` declares the JNI function in the `__ANDROID__` section. The JNI function name must match the Kotlin class + method exactly.
+
+#### `Revision X does not match previously recorded value Y`
+
+SPM запомнил хеш коммита из `Package.resolved`, но тег на GitHub теперь ведёт на другой коммит (после force-push). 
+
+**Решение:** удалить `Package.resolved` и кеш SPM:
+```bash
+rm -rf ~/Desktop/projects/fkr_app/ios/Runner.xcworkspace/xcshareddata/swiftpm
+rm -f ~/Desktop/projects/fkr_app/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+rm -rf ~/Library/Caches/org.swift.swiftpm
+rm -rf ~/Library/Developer/Xcode/DerivedData/Runner-*
+```
+
+Если не помогает — выпустить новую версию (v0.5.5, v0.5.6, ...) и обновить `minimumVersion` в `project.pbxproj`.
 
