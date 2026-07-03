@@ -8,6 +8,8 @@ import com.valhalla.api.models.RouteRequest
 import com.valhalla.api.models.RouteResponse
 import com.valhalla.config.models.ValhallaConfig
 import com.valhalla.valhalla.config.ValhallaConfigManager
+import com.valhalla.api.models.MapMatchRequest
+import com.valhalla.api.models.MapMatchRouteResponse
 
 /**
  * Main entry point for the Valhalla routing engine on Android.
@@ -175,5 +177,19 @@ class Valhalla(
         ValhallaResponse.Json(valhallaResponse)
       }
     }
+  }
+
+  fun traceRoute(request: MapMatchRequest): MapMatchRouteResponse {
+    val encodedRequest = moshi.adapter(MapMatchRequest::class.java).toJson(request)
+    val rawResponse = valhallaActor.traceRoute(encodedRequest)
+
+    if (rawResponse.contains("code") and !rawResponse.contains("routes")) {
+      val error = moshi.adapter(ErrorResponse::class.java).fromJson(rawResponse)
+      error?.let { throw ValhallaException.Internal(it) }
+      throw ValhallaException.InvalidError()
+    }
+
+    return moshi.adapter(MapMatchRouteResponse::class.java).fromJson(rawResponse)
+        ?: throw ValhallaException.InvalidResponse()
   }
 }
