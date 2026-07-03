@@ -18,4 +18,6 @@ internal class ValhallaKotlin {
   external fun traceRoute(request: String, configPath: String): String
 
   external fun matrix(request: String, configPath: String): String
+
+  external fun isochrone(request: String, configPath: String): String
 }

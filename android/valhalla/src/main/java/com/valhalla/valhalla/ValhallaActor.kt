@@ -12,6 +12,8 @@ internal interface ValhallaActorProviding {
   fun traceRoute(request: String): String
 
   fun matrix(request: String): String
+
+  fun isochrone(request: String): String
 }
 
 /**
@@ -52,5 +54,9 @@ internal class ValhallaActor(private val configPath: String) : ValhallaActorProv
 
   override fun matrix(request: String): String {
     return valhallaKotlin.matrix(request, configPath)
+  }
+
+  override fun isochrone(request: String): String {
+    return valhallaKotlin.isochrone(request, configPath)
   }
 }

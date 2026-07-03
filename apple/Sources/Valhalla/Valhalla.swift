@@ -19,6 +19,8 @@ public protocol ValhallaProviding {
     func traceRoute(request: MapMatchRequest) throws -> MapMatchRouteResponse
 
     func matrix(request: MatrixRequest) throws -> MatrixResponse
+
+    func isochrone(request: IsochroneRequest) throws -> IsochroneResponse
 }
 
 public final class Valhalla: ValhallaProviding {
@@ -178,5 +180,27 @@ public final class Valhalla: ValhallaProviding {
 
     public func matrix(rawRequest request: String) -> String {
         actor!.matrix(request)
+    }
+
+    public func isochrone(request: IsochroneRequest) throws -> IsochroneResponse {
+        let requestData = try JSONEncoder().encode(request)
+        guard let requestStr = String(data: requestData, encoding: .utf8) else {
+            throw ValhallaError.encodingNotUtf8("requestStr")
+        }
+
+        let resultStr = isochrone(rawRequest: requestStr)
+        guard let resultData = resultStr.data(using: .utf8) else {
+            throw ValhallaError.encodingNotUtf8("resultData")
+        }
+
+        if let error = try? JSONDecoder().decode(ValhallaErrorModel.self, from: resultData) {
+            throw ValhallaError.valhallaError(error.code, error.message)
+        }
+
+        return try JSONDecoder().decode(IsochroneResponse.self, from: resultData)
+    }
+
+    public func isochrone(rawRequest request: String) -> String {
+        actor!.isochrone(request)
     }
 }

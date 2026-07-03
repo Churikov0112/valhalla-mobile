@@ -106,3 +106,9 @@ std::string ValhallaActor::matrix(const std::string& request) {
     std::string result = actor->matrix(req);
     return result;
 }
+
+std::string ValhallaActor::isochrone(const std::string& request) {
+    std::string req = std::string(request);
+    std::string result = actor->isochrone(req);
+    return result;
+}

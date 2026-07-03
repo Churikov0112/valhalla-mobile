@@ -196,4 +196,8 @@ class Valhalla(
   fun matrix(request: String): String {
     return valhallaActor.matrix(request)
   }
+
+  fun isochrone(request: String): String {
+    return valhallaActor.isochrone(request)
+  }
 }

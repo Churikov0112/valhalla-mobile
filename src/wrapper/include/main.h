@@ -41,6 +41,11 @@ JNIEXPORT jstring JNICALL Java_com_valhalla_valhalla_ValhallaKotlin_matrix(JNIEn
                                                 jstring jRequest,
                                                 jstring jConfigPath);
 
+JNIEXPORT jstring JNICALL Java_com_valhalla_valhalla_ValhallaKotlin_isochrone(JNIEnv *env,
+                                                jobject thiz,
+                                                jstring jRequest,
+                                                jstring jConfigPath);
+
 #ifdef __cplusplus
 }
 #endif
@@ -53,6 +58,7 @@ std::string height(const char *request, void* actor);
 std::string locate(const char *request, void* actor);
 std::string trace_route(const char *request, void* actor);
 std::string matrix(const char *request, void* actor);
+std::string isochrone(const char *request, void* actor);
 void* create_valhalla_actor(const char *config_path, ValhallaMobileHttpClient* http_client = nullptr);
 void delete_valhalla_actor(void* actor);
 

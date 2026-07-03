@@ -24,6 +24,8 @@
 
 - (NSString*)matrix:(NSString*)request;
 
+- (NSString*)isochrone:(NSString*)request;
+
 @end
 
 #endif /* ValhallaWrapperHeader_h */
