@@ -10,6 +10,8 @@ internal interface ValhallaActorProviding {
   fun locate(request: String): String
 
   fun traceRoute(request: String): String
+
+  fun matrix(request: String): String
 }
 
 /**
@@ -46,5 +48,9 @@ internal class ValhallaActor(private val configPath: String) : ValhallaActorProv
 
   override fun traceRoute(request: String): String {
     return valhallaKotlin.traceRoute(request, configPath)
+  }
+
+  override fun matrix(request: String): String {
+    return valhallaKotlin.matrix(request, configPath)
   }
 }

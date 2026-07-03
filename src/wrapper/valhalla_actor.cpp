@@ -100,3 +100,9 @@ std::string ValhallaActor::trace_route(const std::string& request) {
     std::string result = actor->trace_route(req);
     return result;
 }
+
+std::string ValhallaActor::matrix(const std::string& request) {
+    std::string req = std::string(request);
+    std::string result = actor->matrix(req);
+    return result;
+}

@@ -41,6 +41,7 @@ public:
     std::string height(const std::string& request);
     std::string locate(const std::string& request);
     std::string trace_route(const std::string& request);
+    std::string matrix(const std::string& request);
 };
 
 #endif // VALHALLAACTOR_H

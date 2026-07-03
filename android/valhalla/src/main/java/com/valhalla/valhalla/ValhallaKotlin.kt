@@ -16,4 +16,6 @@ internal class ValhallaKotlin {
   external fun locate(request: String, configPath: String): String
 
   external fun traceRoute(request: String, configPath: String): String
+
+  external fun matrix(request: String, configPath: String): String
 }

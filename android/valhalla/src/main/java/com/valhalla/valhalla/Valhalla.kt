@@ -192,4 +192,8 @@ class Valhalla(
     return moshi.adapter(MapMatchRouteResponse::class.java).fromJson(rawResponse)
         ?: throw ValhallaException.InvalidResponse()
   }
+
+  fun matrix(request: String): String {
+    return valhallaActor.matrix(request)
+  }
 }
